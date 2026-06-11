@@ -1,0 +1,19 @@
+{
+  "alert_id": "ALERT-2025-001-CLEAN",
+  "source": "windows-event-log",
+  "timestamp": "2025-06-11T08:00:00Z",
+  "event_type": "user_login",
+  "hostname": "DESKTOP-BENIGN-01",
+  "process_name": "logonui.exe",
+  "command_line": "C:\\Windows\\System32\\logonui.exe",
+  "parent_process": "C:\\Windows\\System32\\winlogon.exe",
+  "indicators": {
+    "hashes": [],
+    "ips": [],
+    "domains": [],
+    "file_paths": []
+  },
+  "username": "jdoe",
+  "logon_type": "Interactive",
+  "session_id": 1
+}

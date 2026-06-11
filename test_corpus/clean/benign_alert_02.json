@@ -1,0 +1,20 @@
+{
+  "alert_id": "ALERT-2025-002-CLEAN",
+  "source": "windows-event-log",
+  "timestamp": "2025-06-11T08:05:00Z",
+  "event_type": "service_start",
+  "hostname": "DESKTOP-BENIGN-01",
+  "process_name": "services.exe",
+  "command_line": "C:\\Windows\\System32\\services.exe",
+  "parent_process": "C:\\Windows\\System32\\wininit.exe",
+  "indicators": {
+    "hashes": [],
+    "ips": [],
+    "domains": [],
+    "file_paths": [
+      "C:\\Windows\\System32\\"
+    ]
+  },
+  "service_name": "Spooler",
+  "service_display_name": "Print Spooler"
+}

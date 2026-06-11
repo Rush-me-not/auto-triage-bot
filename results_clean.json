@@ -1,0 +1,53 @@
+{
+  "tool": "auto-triage-bot",
+  "version": "1.0.0",
+  "run_timestamp": "2026-06-11T06:06:57.005361+00:00",
+  "total_alerts": 2,
+  "clean_alerts": 2,
+  "suspicious_alerts": 0,
+  "findings": [
+    {
+      "alert_id": "ALERT-2025-001-CLEAN",
+      "source": "windows-event-log",
+      "timestamp": "2025-06-11T08:00:00Z",
+      "event_type": "user_login",
+      "hostname": "DESKTOP-BENIGN-01",
+      "severity": "CLEAN",
+      "ttps": [],
+      "misp_enrichment": {
+        "matched_indicators": [],
+        "tags": [],
+        "descriptions": [],
+        "threat_level": "None"
+      },
+      "triage_summary": "Clean alert on DESKTOP-BENIGN-01: process 'logonui.exe' (user_login). No suspicious indicators.",
+      "recommendations": [
+        "No action required."
+      ]
+    },
+    {
+      "alert_id": "ALERT-2025-002-CLEAN",
+      "source": "windows-event-log",
+      "timestamp": "2025-06-11T08:05:00Z",
+      "event_type": "service_start",
+      "hostname": "DESKTOP-BENIGN-01",
+      "severity": "CLEAN",
+      "ttps": [],
+      "misp_enrichment": {
+        "matched_indicators": [],
+        "tags": [],
+        "descriptions": [],
+        "threat_level": "None"
+      },
+      "triage_summary": "Clean alert on DESKTOP-BENIGN-01: process 'services.exe' (service_start). No suspicious indicators.",
+      "recommendations": [
+        "No action required."
+      ]
+    }
+  ],
+  "summary": {
+    "ttp_coverage": {},
+    "top_tactics": [],
+    "overall_assessment": "CLEAN: No suspicious activity detected."
+  }
+}

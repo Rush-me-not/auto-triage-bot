@@ -1,0 +1,266 @@
+{
+  "tool": "auto-triage-bot",
+  "version": "1.0.0",
+  "run_timestamp": "2026-06-11T06:11:05.767779+00:00",
+  "total_alerts": 5,
+  "clean_alerts": 2,
+  "suspicious_alerts": 3,
+  "findings": [
+    {
+      "alert_id": "ALERT-2025-003-SUSP",
+      "source": "edr-agent",
+      "timestamp": "2025-06-11T08:30:00Z",
+      "event_type": "process_creation",
+      "hostname": "WORKSTATION-USER-05",
+      "severity": "HIGH",
+      "ttps": [
+        {
+          "id": "T1059.001",
+          "name": "PowerShell",
+          "tactic": "Execution"
+        },
+        {
+          "id": "T1204.002",
+          "name": "Malicious File",
+          "tactic": "Execution"
+        }
+      ],
+      "misp_enrichment": {
+        "matched_indicators": [
+          "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d",
+          "185.130.5.251",
+          "evil.example.com"
+        ],
+        "tags": [
+          "misp:malware",
+          "misp:ttp:T1059.001",
+          "misp:ip:cnc",
+          "misp:ttp:T1204.002",
+          "misp:domain:malicious"
+        ],
+        "descriptions": [
+          "Emotet payload hash",
+          "Associated with PowerShell abuse",
+          "Known C2 server — Emotet infrastructure",
+          "User execution — payload delivery",
+          "Malware payload delivery domain",
+          "User-executed payload download"
+        ],
+        "threat_level": "High"
+      },
+      "semantic_scan": {
+        "obfuscation_score": 0,
+        "detected_patterns": [],
+        "is_suspicious": false,
+        "llm_reasoning": "LLM unavailable — JSON parse error: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+      },
+      "triage_summary": "High-severity alert on WORKSTATION-USER-05: process 'powershell.exe' (process_creation) mapped to 2 MITRE ATT&CK technique(s). Techniques observed: PowerShell, Malicious File.",
+      "recommendations": [
+        "Immediate investigation required.",
+        "Isolate affected host from network.",
+        "Collect full memory and disk forensics.",
+        "Review PowerShell execution policy and logging."
+      ]
+    },
+    {
+      "alert_id": "ALERT-2025-004-SUSP",
+      "source": "edr-agent",
+      "timestamp": "2025-06-11T09:15:00Z",
+      "event_type": "process_creation",
+      "hostname": "WORKSTATION-USER-05",
+      "severity": "HIGH",
+      "ttps": [
+        {
+          "id": "T1059.001",
+          "name": "PowerShell",
+          "tactic": "Execution"
+        },
+        {
+          "id": "T1053.005",
+          "name": "Scheduled Task",
+          "tactic": "Persistence"
+        },
+        {
+          "id": "T1204.002",
+          "name": "Malicious File",
+          "tactic": "Execution"
+        }
+      ],
+      "misp_enrichment": {
+        "matched_indicators": [
+          "e99a18c428cb38d5f260853678922e03",
+          "91.121.87.54",
+          "185.130.5.251",
+          "malware.download.xyz"
+        ],
+        "tags": [
+          "misp:malware",
+          "misp:ttp:T1059.003",
+          "misp:ip:scanner",
+          "misp:ip:cnc",
+          "misp:ttp:T1204.002",
+          "misp:domain:malicious"
+        ],
+        "descriptions": [
+          "Known CobaltStrike beacon hash",
+          "Cmd.exe lateral movement tooling",
+          "Internet scanning infrastructure",
+          "Known C2 server — Emotet infrastructure",
+          "User execution — payload delivery",
+          "Secondary payload staging domain"
+        ],
+        "threat_level": "High"
+      },
+      "semantic_scan": {
+        "obfuscation_score": 0,
+        "detected_patterns": [],
+        "is_suspicious": false,
+        "llm_reasoning": "LLM unavailable — JSON parse error: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+      },
+      "triage_summary": "High-severity alert on WORKSTATION-USER-05: process 'schtasks.exe' (process_creation) mapped to 3 MITRE ATT&CK technique(s). Techniques observed: PowerShell, Scheduled Task, Malicious File.",
+      "recommendations": [
+        "Immediate investigation required.",
+        "Isolate affected host from network.",
+        "Collect full memory and disk forensics.",
+        "Review scheduled tasks for persistence mechanisms.",
+        "Review PowerShell execution policy and logging."
+      ]
+    },
+    {
+      "alert_id": "ALERT-2025-005-SUSP",
+      "source": "edr-agent",
+      "timestamp": "2025-06-11T09:45:00Z",
+      "event_type": "process_creation",
+      "hostname": "WORKSTATION-USER-05",
+      "severity": "HIGH",
+      "ttps": [
+        {
+          "id": "T1204.002",
+          "name": "Malicious File",
+          "tactic": "Execution"
+        },
+        {
+          "id": "T1218.011",
+          "name": "Rundll32",
+          "tactic": "Defense Evasion"
+        }
+      ],
+      "misp_enrichment": {
+        "matched_indicators": [],
+        "tags": [],
+        "descriptions": [],
+        "threat_level": "None"
+      },
+      "semantic_scan": {
+        "obfuscation_score": 0,
+        "detected_patterns": [],
+        "is_suspicious": false,
+        "llm_reasoning": "LLM unavailable — JSON parse error: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+      },
+      "triage_summary": "High-severity alert on WORKSTATION-USER-05: process 'rundll32.exe' (process_creation) mapped to 2 MITRE ATT&CK technique(s). Techniques observed: Malicious File, Rundll32.",
+      "recommendations": [
+        "Immediate investigation required.",
+        "Isolate affected host from network.",
+        "Collect full memory and disk forensics."
+      ]
+    },
+    {
+      "alert_id": "ALERT-2025-001-CLEAN",
+      "source": "windows-event-log",
+      "timestamp": "2025-06-11T08:00:00Z",
+      "event_type": "user_login",
+      "hostname": "DESKTOP-BENIGN-01",
+      "severity": "CLEAN",
+      "ttps": [],
+      "misp_enrichment": {
+        "matched_indicators": [],
+        "tags": [],
+        "descriptions": [],
+        "threat_level": "None"
+      },
+      "semantic_scan": {
+        "obfuscation_score": 0,
+        "detected_patterns": [],
+        "is_suspicious": false,
+        "llm_reasoning": "LLM unavailable — JSON parse error: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+      },
+      "triage_summary": "Clean alert on DESKTOP-BENIGN-01: process 'logonui.exe' (user_login). No suspicious indicators.",
+      "recommendations": [
+        "No action required."
+      ]
+    },
+    {
+      "alert_id": "ALERT-2025-002-CLEAN",
+      "source": "windows-event-log",
+      "timestamp": "2025-06-11T08:05:00Z",
+      "event_type": "service_start",
+      "hostname": "DESKTOP-BENIGN-01",
+      "severity": "CLEAN",
+      "ttps": [],
+      "misp_enrichment": {
+        "matched_indicators": [],
+        "tags": [],
+        "descriptions": [],
+        "threat_level": "None"
+      },
+      "semantic_scan": {
+        "obfuscation_score": 0,
+        "detected_patterns": [],
+        "is_suspicious": false,
+        "llm_reasoning": "LLM unavailable — JSON parse error: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+      },
+      "triage_summary": "Clean alert on DESKTOP-BENIGN-01: process 'services.exe' (service_start). No suspicious indicators.",
+      "recommendations": [
+        "No action required."
+      ]
+    }
+  ],
+  "correlation_chains": [
+    {
+      "chain_id": "CHAIN-PERSISTENCE_CHAIN-001",
+      "chain_type": "persistence_chain",
+      "alert_ids": [
+        "ALERT-2025-003-SUSP",
+        "ALERT-2025-004-SUSP"
+      ],
+      "severity": "CRITICAL",
+      "description": "Persistence chain detected: Office macro spawned PowerShell (T1059.001) followed by scheduled task creation (T1053.005). This is a common pattern for establishing persistent backdoor access.",
+      "recommendations": [
+        "Immediately isolate affected host from network.",
+        "Review and remove the scheduled task created by the attacker.",
+        "Inspect Office document macros for malicious payloads.",
+        "Audit PowerShell execution policy and enable script block logging."
+      ]
+    },
+    {
+      "chain_id": "CHAIN-INTRUSION_CHAIN-001",
+      "chain_type": "intrusion_chain",
+      "alert_ids": [
+        "ALERT-2025-003-SUSP",
+        "ALERT-2025-005-SUSP"
+      ],
+      "severity": "CRITICAL",
+      "description": "Intrusion chain detected: Malicious file execution (T1204.002) followed by Rundll32 execution (T1218.011) and C2 communication. This pattern is consistent with remote access trojan (RAT) deployment.",
+      "recommendations": [
+        "Isolate affected host and block C2 infrastructure at the firewall.",
+        "Collect full memory and disk forensics for malware analysis.",
+        "Review user activity logs for phishing delivery vectors.",
+        "Escalate to incident response team immediately."
+      ]
+    }
+  ],
+  "summary": {
+    "ttp_coverage": {
+      "T1059.001": 2,
+      "T1204.002": 3,
+      "T1053.005": 1,
+      "T1218.011": 1
+    },
+    "top_tactics": [
+      "Execution",
+      "Persistence",
+      "Defense Evasion"
+    ],
+    "overall_assessment": "CRITICAL: 3 high-severity alert(s) detected with confirmed MITRE ATT&CK TTPs. Immediate response warranted."
+  }
+}

