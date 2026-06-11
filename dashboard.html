@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>auto-triage-bot — Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg-primary: #0a0e17; --bg-secondary: #111827; --bg-card: #1a2332;
+    --bg-hover: #1f2d42; --border: #2a3a50;
+    --text-primary: #e2e8f0; --text-secondary: #94a3b8; --text-muted: #64748b;
+    --accent: #3b82f6; --accent-hover: #60a5fa;
+    --high: #ef4444; --high-bg: rgba(239,68,68,0.12);
+    --medium: #f59e0b; --medium-bg: rgba(245,158,11,0.12);
+    --low: #22c55e; --low-bg: rgba(34,197,94,0.12);
+    --cyan: #06b6d4; --purple: #a78bfa;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+    background: var(--bg-primary); color: var(--text-primary);
+    line-height: 1.6; min-height: 100vh;
+  }
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 0; border-bottom: 1px solid var(--border); margin-bottom: 32px;
+  }
+  .header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .header h1 span { color: var(--accent); }
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 12px;
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .badge-ready { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+  .badge-scanning { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .stat-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; text-align: center;
+  }
+  .stat-card .number { font-size: 36px; font-weight: 800; line-height: 1.1; }
+  .stat-card .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 6px; }
+  .stat-card.high .number { color: var(--high); }
+  .stat-card.medium .number { color: var(--medium); }
+  .stat-card.low .number { color: var(--low); }
+  .stat-card.total .number { color: var(--accent); }
+  .stat-card.cyan .number { color: var(--cyan); }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+  .card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px;
+  }
+  .card-title {
+    font-size: 13px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;
+  }
+  .chart-container { position: relative; height: 260px; width: 100%; }
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .filter-btn {
+    background: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-secondary);
+    padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer;
+    font-family: inherit; transition: all 0.2s;
+  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+  .findings-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .findings-table th {
+    text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border);
+    color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+    cursor: pointer;
+  }
+  .findings-table th:hover { color: var(--text-primary); }
+  .findings-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .findings-table tr:hover td { background: var(--bg-hover); }
+  .findings-table tbody { max-height: 400px; overflow-y: auto; display: block; }
+  .findings-table thead, .findings-table tbody tr { display: table; width: 100%; table-layout: fixed; }
+  .findings-table-wrapper { max-height: 500px; overflow-y: auto; }
+  .sev-badge {
+    font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: 0.5px; display: inline-block;
+  }
+  .sev-HIGH { background: var(--high-bg); color: var(--high); }
+  .sev-CLEAN { background: var(--low-bg); color: var(--low); }
+  .sev-CRITICAL { background: rgba(220,38,38,0.2); color: #f87171; }
+  .threat-level { font-size: 10px; padding: 2px 6px; border-radius: 3px; }
+  .threat-High { color: var(--high); }
+  .threat-None { color: var(--text-muted); }
+  .ttp-tag {
+    display: inline-block; font-size: 10px; background: var(--bg-primary);
+    color: var(--cyan); padding: 1px 6px; border-radius: 3px; margin: 1px 2px;
+    border: 1px solid rgba(6,182,212,0.2);
+  }
+  .chain-card {
+    background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px;
+    padding: 16px; margin-bottom: 12px;
+  }
+  .chain-card:last-child { margin-bottom: 0; }
+  .chain-card .chain-id { color: var(--accent); font-size: 12px; font-weight: 600; }
+  .chain-card .chain-desc { font-size: 12px; color: var(--text-secondary); margin-top: 6px; }
+  .chain-card .chain-rec { font-size: 11px; color: var(--text-muted); margin-top: 8px; padding-left: 12px; border-left: 2px solid var(--high); }
+  .arch-diagram {
+    background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px;
+    padding: 20px; font-size: 12px; line-height: 1.7; white-space: pre;
+    color: var(--text-secondary); overflow-x: auto;
+  }
+  .arch-diagram .highlight { color: var(--accent); }
+  .arch-diagram .arrow { color: var(--text-muted); }
+  .scan-indicator {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 11px; color: var(--accent); opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .scan-indicator.active { opacity: 1; }
+  .scan-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.3; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.2); }
+  }
+  .footer {
+    text-align: center; padding: 24px 0; margin-top: 32px;
+    border-top: 1px solid var(--border); color: var(--text-muted); font-size: 11px;
+  }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  @media (max-width: 900px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .grid-2 { grid-template-columns: 1fr; }
+    .grid-3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <h1><span>atb</span> auto-triage-bot</h1>
+      <div style="color:var(--text-muted);font-size:12px;margin-top:4px;">EDR Alert Triage · MISP Enrichment · MITRE ATT&CK Mapping</div>
+    </div>
+    <div style="text-align:right;">
+      <div class="scan-indicator active" id="scanIndicator">
+        <span class="scan-dot"></span>
+        <span id="scanText">Scanning alerts...</span>
+      </div>
+      <span class="badge badge-ready" style="margin-top:6px;display:inline-block;">Operational</span>
+      <div style="color:var(--text-muted);font-size:12px;margin-top:6px;" id="timestamp"></div>
+    </div>
+  </div>
+
+  <!-- Stat Cards -->
+  <div class="stats-row">
+    <div class="stat-card total"><div class="number" id="statTotal">0</div><div class="label">Total Alerts</div></div>
+    <div class="stat-card high"><div class="number" id="statHigh">0</div><div class="label">HIGH</div></div>
+    <div class="stat-card low"><div class="number" id="statLow">0</div><div class="label">CLEAN</div></div>
+    <div class="stat-card cyan"><div class="number" id="statTTPs">0</div><div class="label">TTPs Covered</div></div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Severity Distribution</div>
+      <div class="chart-container"><canvas id="doughnutChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">MITRE ATT&CK Tactic Coverage</div>
+      <div class="chart-container"><canvas id="radarChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Findings Table -->
+  <div class="card" style="margin-bottom: 28px;">
+    <div class="card-title">Findings</div>
+    <div class="filter-bar" id="filterBar">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="HIGH">HIGH</button>
+      <button class="filter-btn" data-filter="CLEAN">CLEAN</button>
+    </div>
+    <div class="findings-table-wrapper">
+      <table class="findings-table">
+        <thead>
+          <tr>
+            <th>Alert ID</th>
+            <th>Severity</th>
+            <th>Process</th>
+            <th>TTPs</th>
+            <th>Threat Level</th>
+          </tr>
+        </thead>
+        <tbody id="findingsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Correlation Chains -->
+  <div class="card" style="margin-bottom: 28px;">
+    <div class="card-title">Correlation Chains</div>
+    <div id="chainsContainer"></div>
+  </div>
+
+  <!-- Architecture Diagram -->
+  <div class="card" style="margin-bottom: 28px;">
+    <div class="card-title">Architecture</div>
+    <div class="arch-diagram">EDR Alert (JSON) ──> +-------------------+
+                        | alert_parser.py   |  Parse raw EDR alerts
+                        +--------+----------+
+                                 |
+                        +--------v----------+
+                        | misp_enricher.py  |  Mock MISP enrichment
+                        +--------+----------+
+                                 |
+                        +--------v----------+
+                        | mitre_mapper.py   |  MITRE ATT&CK technique mapping
+                        +--------+----------+
+                                 |
+                        +--------v----------+
+                        | semantic_analyzer |  (Optional) DeepSeek V4 LLM
+                        +--------+----------+
+                                 |
+                        +--------v----------+
+                        | triage_engine.py  |  Scoring + severity + recs
+                        +--------+----------+
+                                 |
+                        +--------v----------+
+                        | correlator.py     |  Cross-alert chain detection
+                        +--------+----------+
+                                 |
+                        +--------v----------+
+                        | report.py         |  JSON report output
+                        +-------------------+
+                                 |
+                        v
+                  results.json</div>
+  </div>
+
+  <div class="footer">auto-triage-bot · Built for AI Security Engineering · Local-first, no cloud dependency</div>
+</div>
+
+<script>
+const REPORT = {
+  "tool": "auto-triage-bot",
+  "version": "1.0.0",
+  "run_timestamp": "2026-06-11T06:11:05.767779+00:00",
+  "total_alerts": 5,
+  "clean_alerts": 2,
+  "suspicious_alerts": 3,
+  "findings": [
+    {
+      "alert_id": "ALERT-2025-003-SUSP",
+      "source": "edr-agent",
+      "timestamp": "2025-06-11T08:30:00Z",
+      "event_type": "process_creation",
+      "hostname": "WORKSTATION-USER-05",
+      "severity": "HIGH",
+      "ttps": [{"id":"T1059.001","name":"PowerShell","tactic":"Execution"},{"id":"T1204.002","name":"Malicious File","tactic":"Execution"}],
+      "misp_enrichment": {"threat_level": "High"}
+    },
+    {
+      "alert_id": "ALERT-2025-004-SUSP",
+      "source": "edr-agent",
+      "timestamp": "2025-06-11T09:15:00Z",
+      "event_type": "process_creation",
+      "hostname": "WORKSTATION-USER-05",
+      "severity": "HIGH",
+      "ttps": [{"id":"T1059.001","name":"PowerShell","tactic":"Execution"},{"id":"T1053.005","name":"Scheduled Task","tactic":"Persistence"},{"id":"T1204.002","name":"Malicious File","tactic":"Execution"}],
+      "misp_enrichment": {"threat_level": "High"}
+    },
+    {
+      "alert_id": "ALERT-2025-005-SUSP",
+      "source": "edr-agent",
+      "timestamp": "2025-06-11T09:45:00Z",
+      "event_type": "process_creation",
+      "hostname": "WORKSTATION-USER-05",
+      "severity": "HIGH",
+      "ttps": [{"id":"T1204.002","name":"Malicious File","tactic":"Execution"},{"id":"T1218.011","name":"Rundll32","tactic":"Defense Evasion"}],
+      "misp_enrichment": {"threat_level": "None"}
+    },
+    {
+      "alert_id": "ALERT-2025-001-CLEAN",
+      "source": "windows-event-log",
+      "timestamp": "2025-06-11T08:00:00Z",
+      "event_type": "user_login",
+      "hostname": "DESKTOP-BENIGN-01",
+      "severity": "CLEAN",
+      "ttps": [],
+      "misp_enrichment": {"threat_level": "None"}
+    },
+    {
+      "alert_id": "ALERT-2025-002-CLEAN",
+      "source": "windows-event-log",
+      "timestamp": "2025-06-11T08:05:00Z",
+      "event_type": "service_start",
+      "hostname": "DESKTOP-BENIGN-01",
+      "severity": "CLEAN",
+      "ttps": [],
+      "misp_enrichment": {"threat_level": "None"}
+    }
+  ],
+  "correlation_chains": [
+    {
+      "chain_id": "CHAIN-PERSISTENCE_CHAIN-001",
+      "chain_type": "persistence_chain",
+      "alert_ids": ["ALERT-2025-003-SUSP", "ALERT-2025-004-SUSP"],
+      "severity": "CRITICAL",
+      "description": "Persistence chain detected: Office macro spawned PowerShell (T1059.001) followed by scheduled task creation (T1053.005). This is a common pattern for establishing persistent backdoor access.",
+      "recommendations": [
+        "Immediately isolate affected host from network.",
+        "Review and remove the scheduled task created by the attacker.",
+        "Inspect Office document macros for malicious payloads.",
+        "Audit PowerShell execution policy and enable script block logging."
+      ]
+    },
+    {
+      "chain_id": "CHAIN-INTRUSION_CHAIN-001",
+      "chain_type": "intrusion_chain",
+      "alert_ids": ["ALERT-2025-003-SUSP", "ALERT-2025-005-SUSP"],
+      "severity": "CRITICAL",
+      "description": "Intrusion chain detected: Malicious file execution (T1204.002) followed by Rundll32 execution (T1218.011) and C2 communication. This pattern is consistent with remote access trojan (RAT) deployment.",
+      "recommendations": [
+        "Isolate affected host and block C2 infrastructure at the firewall.",
+        "Collect full memory and disk forensics for malware analysis.",
+        "Review user activity logs for phishing delivery vectors.",
+        "Escalate to incident response team immediately."
+      ]
+    }
+  ],
+  "summary": {
+    "ttp_coverage": {"T1059.001": 2, "T1204.002": 3, "T1053.005": 1, "T1218.011": 1},
+    "top_tactics": ["Execution", "Persistence", "Defense Evasion"],
+    "overall_assessment": "CRITICAL: 3 high-severity alert(s) detected with confirmed MITRE ATT&CK TTPs. Immediate response warranted."
+  }
+};
+
+function animateNumber(el, target, duration) {
+  if (!duration) duration = 800;
+  let start = 0;
+  const step = target / (duration / 16);
+  function tick() {
+    start += step;
+    if (start >= target) { el.textContent = target; return; }
+    el.textContent = Math.floor(start);
+    requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+function getProcessName(finding) {
+  const summary = finding.triage_summary || '';
+  const m = summary.match(/process '([^']+)'/);
+  return m ? m[1] : (finding.hostname || '-');
+}
+
+function renderTable(severityFilter) {
+  const tbody = document.getElementById('findingsBody');
+  const findings = REPORT.findings;
+  const filtered = severityFilter === 'all'
+    ? findings
+    : findings.filter(f => f.severity === severityFilter);
+
+  tbody.innerHTML = '';
+  filtered.forEach(f => {
+    const ttpTags = f.ttps.map(t => `<span class="ttp-tag">${t.id}</span>`).join('');
+    const threatClass = f.misp_enrichment.threat_level === 'High' ? 'threat-High' : 'threat-None';
+    const sevClass = 'sev-' + f.severity;
+    const processName = getProcessName(f);
+
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td style="font-size:11px;">${f.alert_id}</td>
+      <td><span class="sev-badge ${sevClass}">${f.severity}</span></td>
+      <td style="font-size:11px;">${processName}</td>
+      <td>${ttpTags || '<span style="color:var(--text-muted)">—</span>'}</td>
+      <td><span class="threat-level ${threatClass}">${f.misp_enrichment.threat_level}</span></td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+function renderChains() {
+  const container = document.getElementById('chainsContainer');
+  const chains = REPORT.correlation_chains;
+  if (!chains || chains.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No correlation chains detected.</div>';
+    return;
+  }
+  container.innerHTML = '';
+  chains.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'chain-card';
+    div.innerHTML = `
+      <div class="chain-id">${c.chain_id}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${c.chain_type} · ${c.severity}</div>
+      <div class="chain-desc">${c.description}</div>
+      <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">Alerts: ${c.alert_ids.join(', ')}</div>
+      <div class="chain-rec">${c.recommendations.map(r => '→ ' + r).join('<br>')}</div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function initFilters() {
+  const buttons = document.querySelectorAll('.filter-btn');
+  buttons.forEach(btn => {
+    btn.addEventListener('click', function() {
+      buttons.forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      renderTable(this.dataset.filter);
+    });
+  });
+}
+
+function initCharts() {
+  // Doughnut chart
+  const ctx = document.getElementById('doughnutChart').getContext('2d');
+  const high = REPORT.findings.filter(f => f.severity === 'HIGH').length;
+  const clean = REPORT.findings.filter(f => f.severity === 'CLEAN').length;
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['HIGH', 'CLEAN'],
+      datasets: [{
+        data: [high, clean],
+        backgroundColor: ['#ef4444', '#22c55e'],
+        borderColor: ['#0a0e17', '#0a0e17'],
+        borderWidth: 3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#94a3b8', font: { size: 11, family: "'SF Mono','Fira Code',monospace" }, padding: 16 }
+        }
+      },
+      cutout: '65%'
+    }
+  });
+
+  // Radar chart
+  const rctx = document.getElementById('radarChart').getContext('2d');
+  new Chart(rctx, {
+    type: 'radar',
+    data: {
+      labels: ['Execution', 'Persistence', 'Defense Evasion'],
+      datasets: [{
+        label: 'TTPs per Tactic',
+        data: [7, 1, 1],
+        backgroundColor: 'rgba(59,130,246,0.15)',
+        borderColor: '#3b82f6',
+        borderWidth: 2,
+        pointBackgroundColor: '#3b82f6',
+        pointBorderColor: '#0a0e17',
+        pointRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        r: {
+          beginAtZero: true,
+          grid: { color: 'rgba(42,58,80,0.5)' },
+          pointLabels: { color: '#94a3b8', font: { size: 11, family: "'SF Mono','Fira Code',monospace" } },
+          ticks: { color: '#64748b', backdropColor: 'transparent', stepSize: 1 }
+        }
+      },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#94a3b8', font: { size: 10, family: "'SF Mono','Fira Code',monospace" }, padding: 12 }
+        }
+      }
+    }
+  });
+}
+
+function initDashboard() {
+  // Timestamp
+  document.getElementById('timestamp').textContent = new Date(REPORT.run_timestamp).toLocaleString();
+
+  // Animated counters
+  animateNumber(document.getElementById('statTotal'), REPORT.total_alerts);
+  animateNumber(document.getElementById('statHigh'), REPORT.findings.filter(f => f.severity === 'HIGH').length);
+  animateNumber(document.getElementById('statLow'), REPORT.findings.filter(f => f.severity === 'CLEAN').length);
+  const ttpCount = Object.keys(REPORT.summary.ttp_coverage).length;
+  animateNumber(document.getElementById('statTTPs'), ttpCount);
+
+  // Scan animation
+  setTimeout(() => {
+    const indicator = document.getElementById('scanIndicator');
+    indicator.classList.remove('active');
+    document.getElementById('scanText').textContent = 'Scan complete';
+  }, 2000);
+
+  // Charts
+  initCharts();
+
+  // Table + filters
+  renderTable('all');
+  initFilters();
+
+  // Chains
+  renderChains();
+}
+
+document.addEventListener('DOMContentLoaded', initDashboard);
+</script>
+</body>
+</html>
