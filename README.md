@@ -16,6 +16,9 @@ auto-triage-bot is a modular triage pipeline that automates the entire workflow:
 - **Mock MISP mode:** A local IoC database replaces live MISP API calls, enabling offline execution and reproducible test runs.
 - **Optional LLM bolt-on:** DeepSeek V4 semantic analysis is detected at runtime. If the API key is present, it runs. If not, the pipeline degrades gracefully.
 - **Deterministic ATT&CK mapping:** Rule-based regex matching for known binaries and command-line patterns ensures explainable, auditable technique assignment.
+- **Calibrated scoring:** Optional isotonic regression calibration refines the weighted score into better-calibrated probabilities (use `--scoring-config` + `--calibrator`).
+- **Correlation confidence:** Each attack chain includes a confidence score (0–1) based on mean TTP severity, temporal proximity, and IoC overlap.
+- **Prompt injection guard:** Command-line strings are inspected for delimiter-pair injection, instruction-override patterns, and excessive-length heuristics before LLM submission.
 
 ## Tech Stack
 
@@ -48,7 +51,7 @@ Uses rule-based detection on process names and command-line patterns to map aler
 
 ### Module 4: `triage_engine.py` — Severity Scoring
 
-Scores each alert based on: number of mapped TTPs, MISP threat level, and event type. Produces a severity label (HIGH/CLEAN), a plain-English triage summary, and prioritized recommendations. The scoring algorithm weights multi-TTP alerts with confirmed MISP matches as highest priority.
+Scores each alert based on: number of mapped TTPs, MISP threat level, and event type. Produces a severity label (HIGH/CLEAN), a plain-English triage summary, and prioritized recommendations. The scoring algorithm weights multi-TTP alerts with confirmed MISP matches as highest priority. Supports optional isotonic regression calibration via `--scoring-config` and `--calibrator` flags for better-calibrated probability scores.
 
 ### Module 5: `semantic_analyzer.py` — LLM Analysis (Optional)
 
@@ -78,7 +81,7 @@ CLI entry point with argument parsing, pipeline orchestration, and user feedback
 | ALERT-2025-002-CLEAN | CLEAN | — | None |
 | ALERT-2025-003-SUSP | HIGH | T1059.001, T1204.002 | High |
 | ALERT-2025-004-SUSP | HIGH | T1059.001, T1053.005, T1204.002 | High |
-| ALERT-2025-005-SUSP | HIGH | T1204.002, T1218.011 | None |
+| ALERT-2025-005-SUSP | MEDIUM | T1204.002, T1218.011 | None |
 
 ### MITRE ATT&CK Coverage
 
@@ -112,6 +115,9 @@ CLI entry point with argument parsing, pipeline orchestration, and user feedback
 - Real-time directory watch mode
 - SIEM output formats (CEF, LEEF, Elastic ECS)
 - Web UI for interactive triage review
+- Replace pickle serialization for calibrator with safetensors or signed JSON format
+- Credential scrubbing before LLM submission
+- Structured audit logging with append-only log file
 
 ## Build Log
 
@@ -137,6 +143,9 @@ python3 src/main.py test_corpus/ --no-llm
 
 # Text summary output
 python3 src/main.py test_corpus/ --format text
+
+# Calibrated scoring with scoring config and calibrator
+python3 src/main.py test_corpus/ --scoring-config src/scoring_config.json --calibrator calibrator.pkl
 
 # Help
 python3 src/main.py --help
