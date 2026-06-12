@@ -13,6 +13,8 @@ import urllib.request
 import urllib.error
 from typing import Any
 
+from src.prompt_injection_detector import detect_prompt_injection
+
 # ── Configuration ──────────────────────────────────────────────────────────
 
 DEEPSEEK_ENDPOINT = "https://api.deepseek.com/v1/chat/completions"
@@ -89,6 +91,14 @@ def analyze_command_line(command_line: str) -> dict[str, Any]:
             is_suspicious (bool): whether the command line is suspicious.
             llm_reasoning (str): reasoning from the LLM.
     """
+    # Prompt injection guard: check command line before sending to LLM
+    injection_check = detect_prompt_injection(command_line)
+    if injection_check["flagged"]:
+        return _degraded_result(
+            f"Prompt injection risk detected (score={injection_check['risk_score']:.2f}). "
+            f"Patterns: {', '.join(injection_check['detected_patterns'])}"
+        )
+
     key = _load_key()
     if key is None:
         return _degraded_result("LLM unavailable — skipped")

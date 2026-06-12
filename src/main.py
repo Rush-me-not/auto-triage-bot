@@ -31,6 +31,7 @@ from src.misp_enricher import enrich_alert, can_use_llm
 from src.mitre_mapper import map_ttps
 from src.triage_engine import score, _load_scoring_config
 from src.report import build_finding, build_report, write_report
+from src.prompt_injection_detector import detect_prompt_injection
 from src.semantic_analyzer import analyze_command_line, can_use_deepseek
 from src.correlator import correlate
 
@@ -152,6 +153,13 @@ def main() -> None:
         if run_llm:
             cmd_line = alert.get("command_line", "")
             if cmd_line:
+                injection_check = detect_prompt_injection(cmd_line)
+                if injection_check["flagged"] and args.verbose:
+                    print(
+                        f"  [INJECTION GUARD] {alert['alert_id']}: "
+                        f"risk={injection_check['risk_score']:.2f}, "
+                        f"patterns={injection_check['detected_patterns']}"
+                    )
                 semantic_result = analyze_command_line(cmd_line)
                 if args.verbose and semantic_result.get("is_suspicious"):
                     print(
