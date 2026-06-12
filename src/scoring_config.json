@@ -1,0 +1,35 @@
+{
+  "weights": {
+    "ttp_count": 0.35,
+    "ttp_max_severity": 0.25,
+    "misp_threat_level": 0.20,
+    "event_type_baseline": 0.10,
+    "temporal_proximity": 0.10
+  },
+  "thresholds": {
+    "CRITICAL": 0.80,
+    "HIGH": 0.55,
+    "MEDIUM": 0.30,
+    "LOW": 0.10
+  },
+  "ttp_count_max": 3,
+  "event_type_scores": {
+    "malware_detected": 1.0,
+    "file_execution_detected": 0.8,
+    "suspicious_network": 0.7,
+    "process_creation": 0.5,
+    "registry_modification": 0.5,
+    "file_creation": 0.5,
+    "user_login": 0.2,
+    "default": 0.3
+  },
+  "misp_threat_map": {
+    "High": 1.0,
+    "Medium": 0.5,
+    "None": 0.0
+  },
+  "temporal_windows_hours": {
+    "recent": 1,
+    "moderate": 24
+  }
+}

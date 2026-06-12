@@ -29,7 +29,7 @@ if _PROJECT_ROOT not in sys.path:
 from src.alert_parser import parse_alert_directory
 from src.misp_enricher import enrich_alert, can_use_llm
 from src.mitre_mapper import map_ttps
-from src.triage_engine import score
+from src.triage_engine import score, _load_scoring_config
 from src.report import build_finding, build_report, write_report
 from src.semantic_analyzer import analyze_command_line, can_use_deepseek
 from src.correlator import correlate
@@ -91,6 +91,13 @@ def main() -> None:
         default=True,
         help="Enable cross-alert correlation (default: True)",
     )
+    parser.add_argument(
+        "--scoring-config",
+        type=str,
+        default=None,
+        help="Path to scoring configuration JSON for weighted multi-factor scoring. "
+             "If not provided, falls back to default threshold-based logic.",
+    )
 
     args = parser.parse_args()
 
@@ -112,6 +119,16 @@ def main() -> None:
 
     # Determine if we should run LLM analysis
     run_llm = not args.no_llm and can_use_deepseek()
+
+    # Load scoring config if specified
+    scoring_config = None
+    if args.scoring_config:
+        scoring_config = _load_scoring_config(args.scoring_config)
+        if scoring_config is None:
+            print(f"Warning: could not load scoring config from '{args.scoring_config}'. "
+                  "Falling back to threshold-based scoring.", file=sys.stderr)
+        elif args.verbose:
+            print(f"[+] Loaded weighted scoring config from '{args.scoring_config}'.")
 
     # ── Process each alert ────────────────────────────────────────
     findings: list[dict[str, Any]] = []
@@ -136,7 +153,11 @@ def main() -> None:
                     )
 
         # 4. Triage scoring
-        severity, triage_summary, recommendations = score(alert, ttps)
+        severity, triage_summary, recommendations = score(
+            alert, ttps,
+            misp_enrichment=misp_data,
+            scoring_config=scoring_config,
+        )
 
         # 5. Build finding
         finding = build_finding(
@@ -169,12 +190,13 @@ def main() -> None:
     write_report(report, args.output)
 
     # Also print a quick summary
+    crit = sum(1 for f in findings if f["severity"] == "CRITICAL")
     h = sum(1 for f in findings if f["severity"] == "HIGH")
     m = sum(1 for f in findings if f["severity"] == "MEDIUM")
     l = sum(1 for f in findings if f["severity"] == "LOW")
     c = sum(1 for f in findings if f["severity"] == "CLEAN")
     print(f"\nSummary: {len(findings)} alerts processed "
-          f"(HIGH={h}, MEDIUM={m}, LOW={l}, CLEAN={c})")
+          f"(CRITICAL={crit}, HIGH={h}, MEDIUM={m}, LOW={l}, CLEAN={c})")
     if correlation_chains:
         print(f"Correlation chains detected: {len(correlation_chains)}")
 

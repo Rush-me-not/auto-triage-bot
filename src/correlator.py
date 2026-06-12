@@ -5,8 +5,16 @@ Takes a list of ALL findings (after individual triage) and looks for known
 attack sequences spanning multiple alerts.  The combinatory benefit is novel
 — no standard SOC tool does cross-alert behavioral correlation at this
 fidelity without a SIEM.
+
+Enhancements:
+  - Temporal correlation: filters alert pairs to those within
+    ``max_time_window_minutes`` (default: 60).
+  - ``rapid_lateral_movement``: same TTP appearing on different hosts
+    within 5 minutes.
+  - ``time_delta_minutes`` added to chain output.
 """
 
+from datetime import datetime, timezone
 from typing import Any
 
 # ── Attack chain definitions ───────────────────────────────────────────────
@@ -67,15 +75,152 @@ ATTACK_CHAINS: list[dict[str, Any]] = [
             "Conduct a full threat hunting exercise across the environment.",
         ],
     },
+    {
+        "chain_type": "rapid_lateral_movement",
+        "ttp_sequence": [],  # dynamic — detected by TTP overlap across hosts
+        "severity": "CRITICAL",
+        "base_description": (
+            "Rapid lateral movement detected: the same TTP was observed on "
+            "different hosts within a 5-minute window. This pattern is "
+            "consistent with automated lateral movement or worm-like propagation."
+        ),
+        "recommendations": [
+            "Immediately isolate ALL affected hosts from the network.",
+            "Identify the initial compromise vector and patient zero.",
+            "Block lateral movement ports (SMB, RPC, WMI) between affected segments.",
+            "Review authentication logs for anomalous credential use.",
+            "Initiate full-scale incident response.",
+        ],
+    },
 ]
 
 
-def correlate(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _parse_timestamp(ts_str: str) -> datetime | None:
+    """Parse an ISO 8601 timestamp string into a UTC datetime.
+
+    Returns None if parsing fails.
+    """
+    if not ts_str:
+        return None
+    try:
+        ts_clean = ts_str.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(ts_clean)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except (ValueError, TypeError):
+        return None
+
+
+def _time_delta_minutes(
+    finding_a: dict[str, Any], finding_b: dict[str, Any]
+) -> float | None:
+    """Compute the absolute time difference in minutes between two findings.
+
+    Returns None if either timestamp cannot be parsed.
+    """
+    ts_a = _parse_timestamp(finding_a.get("timestamp", ""))
+    ts_b = _parse_timestamp(finding_b.get("timestamp", ""))
+    if ts_a is None or ts_b is None:
+        return None
+    return abs((ts_a - ts_b).total_seconds()) / 60.0
+
+
+def _detect_rapid_lateral_movement(
+    findings: list[dict[str, Any]],
+    max_time_window_minutes: float,
+) -> list[dict[str, Any]]:
+    """Detect rapid lateral movement: same TTP on different hosts within 5 min.
+
+    Args:
+        findings: List of finding dicts.
+        max_time_window_minutes: Max time window for correlation (unused here;
+                                  rapid lateral uses a fixed 5-minute window).
+
+    Returns:
+        List of rapid_lateral_movement chain dicts.
+    """
+    RLM_WINDOW = 5.0  # fixed 5-minute window for rapid lateral movement
+    chains: list[dict[str, Any]] = []
+    chain_counter = 0
+
+    # Build a map of TTP ID -> list of findings with that TTP
+    ttp_to_findings: dict[str, list[dict[str, Any]]] = {}
+    for f in findings:
+        for ttp in f.get("ttps", []):
+            tid = ttp["id"]
+            ttp_to_findings.setdefault(tid, []).append(f)
+
+    # For each TTP that appears on multiple distinct hosts within 5 min
+    seen_pairs: set[tuple[str, str, str]] = set()  # (ttp_id, host_a, host_b)
+
+    for ttp_id, f_list in ttp_to_findings.items():
+        if len(f_list) < 2:
+            continue
+        for i in range(len(f_list)):
+            for j in range(i + 1, len(f_list)):
+                fa, fb = f_list[i], f_list[j]
+                host_a = fa.get("hostname", "")
+                host_b = fb.get("hostname", "")
+                if host_a == host_b:
+                    continue  # same host — not lateral movement
+
+                # Deduplicate by sorted pair
+                pair_key = (ttp_id, *sorted([host_a, host_b]))
+                if pair_key in seen_pairs:
+                    continue
+
+                delta = _time_delta_minutes(fa, fb)
+                if delta is not None and delta <= RLM_WINDOW:
+                    seen_pairs.add(pair_key)
+                    chain_counter += 1
+                    chain_id = f"CHAIN-RAPIDLATERAL-{chain_counter:03d}"
+
+                    ttp_name = ""
+                    for ttp in fa.get("ttps", []):
+                        if ttp["id"] == ttp_id:
+                            ttp_name = ttp["name"]
+                            break
+
+                    chains.append({
+                        "chain_id": chain_id,
+                        "chain_type": "rapid_lateral_movement",
+                        "alert_ids": [fa["alert_id"], fb["alert_id"]],
+                        "hosts": [host_a, host_b],
+                        "shared_ttp": ttp_id,
+                        "shared_ttp_name": ttp_name,
+                        "severity": "CRITICAL",
+                        "description": (
+                            f"Rapid lateral movement detected: {ttp_name} "
+                            f"({ttp_id}) observed on {host_a} and {host_b} "
+                            f"within {delta:.1f} minutes."
+                        ),
+                        "time_delta_minutes": round(delta, 1),
+                        "recommendations": [
+                            "Immediately isolate ALL affected hosts from the network.",
+                            "Identify the initial compromise vector and patient zero.",
+                            "Block lateral movement ports (SMB, RPC, WMI) between affected segments.",
+                            "Review authentication logs for anomalous credential use.",
+                            "Initiate full-scale incident response.",
+                        ],
+                    })
+
+    return chains
+
+
+def correlate(
+    findings: list[dict[str, Any]],
+    max_time_window_minutes: float = 60.0,
+) -> list[dict[str, Any]]:
     """Correlate individual alert findings into multi-alert attack chains.
 
     Args:
         findings: A list of finding dicts, each produced by
                   :func:`report.build_finding`.
+        max_time_window_minutes: Maximum time window (in minutes) between
+                                 consecutive alerts in a chain. Alerts outside
+                                 this window are filtered out.
+                                 Default: 60.
 
     Returns:
         A list of correlation finding dicts, each with keys:
@@ -85,6 +230,7 @@ def correlate(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
             severity (str):           CRITICAL / HIGH / MEDIUM
             description (str):        Human-readable description.
             recommendations (list[str]): Actionable recommendations.
+            time_delta_minutes (float, optional): Time delta between alerts.
     """
     chains: list[dict[str, Any]] = []
     chain_counter: dict[str, int] = {}
@@ -98,6 +244,10 @@ def correlate(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
     # For each attack chain definition, try to find matching alerts
     for chain_def in ATTACK_CHAINS:
+        # Skip rapid_lateral_movement — handled separately
+        if chain_def["chain_type"] == "rapid_lateral_movement":
+            continue
+
         target_ttps = chain_def["ttp_sequence"]
         chain_type = chain_def["chain_type"]
         severity = chain_def["severity"]
@@ -138,6 +288,12 @@ def correlate(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
             for match in ttp_matches:
                 mid = match.get("alert_id", "")
                 if mid not in used_ids:
+                    # Check temporal proximity against previous alert
+                    if chain_alerts:
+                        prev = chain_alerts[-1]
+                        delta = _time_delta_minutes(match, prev)
+                        if delta is not None and delta > max_time_window_minutes:
+                            continue  # skip — outside time window
                     chosen = match
                     break
             if chosen is None and pos > 0:
@@ -161,13 +317,28 @@ def correlate(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
         alert_ids = [a["alert_id"] for a in chain_alerts]
 
-        chains.append({
+        # Compute time delta between first and last alert in chain
+        time_delta = None
+        if len(chain_alerts) >= 2:
+            td = _time_delta_minutes(chain_alerts[0], chain_alerts[-1])
+            if td is not None:
+                time_delta = round(td, 1)
+
+        chain_entry: dict[str, Any] = {
             "chain_id": chain_id,
             "chain_type": chain_type,
             "alert_ids": alert_ids,
             "severity": severity,
             "description": chain_def["base_description"],
             "recommendations": list(chain_def["recommendations"]),
-        })
+        }
+        if time_delta is not None:
+            chain_entry["time_delta_minutes"] = time_delta
+
+        chains.append(chain_entry)
+
+    # ── Detect rapid lateral movement ──────────────────────────────────
+    rlm_chains = _detect_rapid_lateral_movement(findings, max_time_window_minutes)
+    chains.extend(rlm_chains)
 
     return chains
