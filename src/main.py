@@ -98,6 +98,13 @@ def main() -> None:
         help="Path to scoring configuration JSON for weighted multi-factor scoring. "
              "If not provided, falls back to default threshold-based logic.",
     )
+    parser.add_argument(
+        "--calibrator",
+        type=str,
+        default=None,
+        help="Path to a pickled isotonic regression calibrator (.pkl). "
+             "If provided with --scoring-config, calibrated scoring is used.",
+    )
 
     args = parser.parse_args()
 
@@ -157,6 +164,7 @@ def main() -> None:
             alert, ttps,
             misp_enrichment=misp_data,
             scoring_config=scoring_config,
+            calibrator_path=args.calibrator,
         )
 
         # 5. Build finding

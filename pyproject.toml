@@ -18,6 +18,7 @@ dev = [
     "pytest",
     "pytest-cov",
     "ruff",
+    "scikit-learn",
 ]
 
 [tool.ruff]

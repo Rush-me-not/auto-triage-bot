@@ -21,6 +21,7 @@ from typing import Any
 
 # Re-use the TTP severity table from mitre_mapper
 from src.mitre_mapper import TTP_SEVERITY
+from src.calibrated_scorer import CalibratedScorer
 
 # Patterns that make an event "unusual" even with zero TTPs
 _UNUSUAL_PATTERNS = [
@@ -181,6 +182,7 @@ def score(
     misp_enrichment: dict[str, Any] | None = None,
     scoring_config: dict[str, Any] | None = None,
     scoring_config_path: str | None = None,
+    calibrator_path: str | None = None,
 ) -> tuple[str, str, list[str]]:
     """Determine severity, generate a triage summary, and produce recommendations.
 
@@ -203,9 +205,10 @@ def score(
     if scoring_config is None and scoring_config_path is not None:
         scoring_config = _load_scoring_config(scoring_config_path)
 
-    # ── Weighted multi-factor scoring mode ───────────────────────────
+    # ── Weighted multi-factor scoring mode (with optional calibration) ──
     if scoring_config is not None:
-        composite, factor_details = _compute_weighted_score(
+        scorer = CalibratedScorer(calibrator_path=calibrator_path)
+        composite, factor_details = scorer.score(
             alert, ttps, misp_enrichment, scoring_config
         )
         severity = _weighted_severity_label(composite, scoring_config)
