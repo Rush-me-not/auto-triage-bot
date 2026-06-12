@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "auto-triage-bot"
+version = "1.1.0"
+description = "Automated alert triage bot with MITRE ATT&CK mapping and MISP enrichment"
+requires-python = ">=3.11"
+keywords = ["edr", "triage", "mitre-attack", "misp", "soc", "ai-security"]
+license = {text = "MIT"}
+
+[project.scripts]
+auto-triage = "src.main:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
