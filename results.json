@@ -1,7 +1,7 @@
 {
   "tool": "auto-triage-bot",
   "version": "1.0.0",
-  "run_timestamp": "2026-06-11T06:11:05.767779+00:00",
+  "run_timestamp": "2026-06-12T01:12:36.390633+00:00",
   "total_alerts": 5,
   "clean_alerts": 2,
   "suspicious_alerts": 3,
@@ -49,10 +49,14 @@
         "threat_level": "High"
       },
       "semantic_scan": {
-        "obfuscation_score": 0,
-        "detected_patterns": [],
-        "is_suspicious": false,
-        "llm_reasoning": "LLM unavailable — JSON parse error: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+        "obfuscation_score": 0.95,
+        "detected_patterns": [
+          "EncodedCommand",
+          "base64 encoding",
+          "download cradle"
+        ],
+        "is_suspicious": true,
+        "llm_reasoning": "Detected patterns: EncodedCommand, base64 encoding, download cradle (confidence: 0.95)"
       },
       "triage_summary": "High-severity alert on WORKSTATION-USER-05: process 'powershell.exe' (process_creation) mapped to 2 MITRE ATT&CK technique(s). Techniques observed: PowerShell, Malicious File.",
       "recommendations": [
@@ -112,10 +116,15 @@
         "threat_level": "High"
       },
       "semantic_scan": {
-        "obfuscation_score": 0,
-        "detected_patterns": [],
-        "is_suspicious": false,
-        "llm_reasoning": "LLM unavailable — JSON parse error: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+        "obfuscation_score": 0.95,
+        "detected_patterns": [
+          "base64 encoded command",
+          "hidden window execution",
+          "scheduled task creation",
+          "download cradle"
+        ],
+        "is_suspicious": true,
+        "llm_reasoning": "Detected patterns: base64 encoded command, hidden window execution, scheduled task creation, download cradle (confidence: 0.95)"
       },
       "triage_summary": "High-severity alert on WORKSTATION-USER-05: process 'schtasks.exe' (process_creation) mapped to 3 MITRE ATT&CK technique(s). Techniques observed: PowerShell, Scheduled Task, Malicious File.",
       "recommendations": [
@@ -152,10 +161,10 @@
         "threat_level": "None"
       },
       "semantic_scan": {
-        "obfuscation_score": 0,
+        "obfuscation_score": 0.0,
         "detected_patterns": [],
         "is_suspicious": false,
-        "llm_reasoning": "LLM unavailable — JSON parse error: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+        "llm_reasoning": "Detected patterns: none (confidence: 0.00)"
       },
       "triage_summary": "High-severity alert on WORKSTATION-USER-05: process 'rundll32.exe' (process_creation) mapped to 2 MITRE ATT&CK technique(s). Techniques observed: Malicious File, Rundll32.",
       "recommendations": [
@@ -179,10 +188,10 @@
         "threat_level": "None"
       },
       "semantic_scan": {
-        "obfuscation_score": 0,
+        "obfuscation_score": 0.0,
         "detected_patterns": [],
         "is_suspicious": false,
-        "llm_reasoning": "LLM unavailable — JSON parse error: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+        "llm_reasoning": "Detected patterns: none (confidence: 0.00)"
       },
       "triage_summary": "Clean alert on DESKTOP-BENIGN-01: process 'logonui.exe' (user_login). No suspicious indicators.",
       "recommendations": [
@@ -204,10 +213,10 @@
         "threat_level": "None"
       },
       "semantic_scan": {
-        "obfuscation_score": 0,
+        "obfuscation_score": 0.0,
         "detected_patterns": [],
         "is_suspicious": false,
-        "llm_reasoning": "LLM unavailable — JSON parse error: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+        "llm_reasoning": "Detected patterns: none (confidence: 0.00)"
       },
       "triage_summary": "Clean alert on DESKTOP-BENIGN-01: process 'services.exe' (service_start). No suspicious indicators.",
       "recommendations": [

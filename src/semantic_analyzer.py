@@ -8,6 +8,7 @@ Gracefully degrades if the API key is missing or the call fails.
 
 import json
 import os
+import re
 import urllib.request
 import urllib.error
 from typing import Any
@@ -27,8 +28,8 @@ _KEY_FILE_PATH = os.path.join(
 _ANALYSIS_PROMPT = (
     "You are a security analysis AI. Classify whether the following Windows "
     "command line contains obfuscation, encoding, or suspicious execution "
-    "patterns. Respond with JSON only: "
-    "{'obfuscation_detected': bool, 'patterns': [list of str], 'confidence': float (0-1)}"
+    "patterns. Respond with valid JSON only (double quotes, no markdown fences): "
+    '{"obfuscation_detected": bool, "patterns": [list of str], "confidence": float (0-1)}'
 )
 
 MAX_INPUT_LENGTH = 2000
@@ -103,6 +104,7 @@ def analyze_command_line(command_line: str) -> dict[str, Any]:
         ],
         "temperature": 0.1,
         "max_tokens": 256,
+        "response_format": {"type": "json_object"},
     }
 
     data = json.dumps(payload).encode("utf-8")
@@ -138,10 +140,25 @@ def analyze_command_line(command_line: str) -> dict[str, Any]:
 
     # Parse the LLM's JSON reply (may be wrapped in markdown code fences)
     content = _strip_markdown_fences(content)
+    llm_result = None
+
+    # Attempt 1: direct parse
     try:
         llm_result = json.loads(content)
-    except json.JSONDecodeError as exc:
-        return _degraded_result(f"LLM unavailable — JSON parse error: {exc}")
+    except json.JSONDecodeError:
+        pass
+
+    # Attempt 2: extract first JSON object from response
+    if llm_result is None:
+        match = re.search(r'\{[^{}]*\}', content)
+        if match:
+            try:
+                llm_result = json.loads(match.group())
+            except json.JSONDecodeError:
+                pass
+
+    if llm_result is None:
+        return _degraded_result(f"LLM unavailable — JSON parse error: could not parse: {content[:200]}")
 
     # Normalise to our return schema
     obfuscation_detected = bool(llm_result.get("obfuscation_detected", False))
