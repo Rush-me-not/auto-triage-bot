@@ -1,7 +1,7 @@
 {
   "tool": "auto-triage-bot",
-  "version": "1.0.0",
-  "run_timestamp": "2026-06-12T01:12:36.390633+00:00",
+  "version": "1.1.0",
+  "run_timestamp": "2026-06-12T22:59:43.055495+00:00",
   "total_alerts": 5,
   "clean_alerts": 2,
   "suspicious_alerts": 3,
@@ -12,7 +12,7 @@
       "timestamp": "2025-06-11T08:30:00Z",
       "event_type": "process_creation",
       "hostname": "WORKSTATION-USER-05",
-      "severity": "HIGH",
+      "severity": "CRITICAL",
       "ttps": [
         {
           "id": "T1059.001",
@@ -58,11 +58,12 @@
         "is_suspicious": true,
         "llm_reasoning": "Detected patterns: EncodedCommand, base64 encoding, download cradle (confidence: 0.95)"
       },
-      "triage_summary": "High-severity alert on WORKSTATION-USER-05: process 'powershell.exe' (process_creation) mapped to 2 MITRE ATT&CK technique(s). Techniques observed: PowerShell, Malicious File.",
+      "triage_summary": "Critical-severity alert on WORKSTATION-USER-05: process 'powershell.exe' (process_creation) mapped to 2 MITRE ATT&CK technique(s). Techniques observed: PowerShell, Malicious File. Weighted composite score: 0.80",
       "recommendations": [
-        "Immediate investigation required.",
-        "Isolate affected host from network.",
+        "IMMEDIATE INCIDENT RESPONSE REQUIRED.",
+        "Isolate affected host from network immediately.",
         "Collect full memory and disk forensics.",
+        "Notify security leadership and initiate incident response plan.",
         "Review PowerShell execution policy and logging."
       ]
     },
@@ -72,7 +73,7 @@
       "timestamp": "2025-06-11T09:15:00Z",
       "event_type": "process_creation",
       "hostname": "WORKSTATION-USER-05",
-      "severity": "HIGH",
+      "severity": "CRITICAL",
       "ttps": [
         {
           "id": "T1059.001",
@@ -118,19 +119,20 @@
       "semantic_scan": {
         "obfuscation_score": 0.95,
         "detected_patterns": [
-          "base64 encoded command",
-          "hidden window execution",
-          "scheduled task creation",
-          "download cradle"
+          "Base64 encoded PowerShell command",
+          "Hidden window execution",
+          "Scheduled task creation with encoded payload",
+          "Download cradle from remote URL"
         ],
         "is_suspicious": true,
-        "llm_reasoning": "Detected patterns: base64 encoded command, hidden window execution, scheduled task creation, download cradle (confidence: 0.95)"
+        "llm_reasoning": "Detected patterns: Base64 encoded PowerShell command, Hidden window execution, Scheduled task creation with encoded payload, Download cradle from remote URL (confidence: 0.95)"
       },
-      "triage_summary": "High-severity alert on WORKSTATION-USER-05: process 'schtasks.exe' (process_creation) mapped to 3 MITRE ATT&CK technique(s). Techniques observed: PowerShell, Scheduled Task, Malicious File.",
+      "triage_summary": "Critical-severity alert on WORKSTATION-USER-05: process 'schtasks.exe' (process_creation) mapped to 3 MITRE ATT&CK technique(s). Techniques observed: PowerShell, Scheduled Task, Malicious File. Weighted composite score: 0.90",
       "recommendations": [
-        "Immediate investigation required.",
-        "Isolate affected host from network.",
+        "IMMEDIATE INCIDENT RESPONSE REQUIRED.",
+        "Isolate affected host from network immediately.",
         "Collect full memory and disk forensics.",
+        "Notify security leadership and initiate incident response plan.",
         "Review scheduled tasks for persistence mechanisms.",
         "Review PowerShell execution policy and logging."
       ]
@@ -239,7 +241,9 @@
         "Review and remove the scheduled task created by the attacker.",
         "Inspect Office document macros for malicious payloads.",
         "Audit PowerShell execution policy and enable script block logging."
-      ]
+      ],
+      "time_delta_minutes": 45.0,
+      "confidence": 0.0484
     },
     {
       "chain_id": "CHAIN-INTRUSION_CHAIN-001",
@@ -255,7 +259,9 @@
         "Collect full memory and disk forensics for malware analysis.",
         "Review user activity logs for phishing delivery vectors.",
         "Escalate to incident response team immediately."
-      ]
+      ],
+      "time_delta_minutes": 75.0,
+      "confidence": 0.0427
     }
   ],
   "summary": {
@@ -270,6 +276,6 @@
       "Persistence",
       "Defense Evasion"
     ],
-    "overall_assessment": "CRITICAL: 3 high-severity alert(s) detected with confirmed MITRE ATT&CK TTPs. Immediate response warranted."
+    "overall_assessment": "CRITICAL: 1 high-severity alert(s) detected with confirmed MITRE ATT&CK TTPs. Immediate response warranted."
   }
 }
