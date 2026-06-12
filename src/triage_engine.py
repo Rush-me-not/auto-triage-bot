@@ -16,12 +16,10 @@ Weighted mode (when scoring_config is provided):
 
 import json
 import os
-from datetime import datetime, timezone
 from typing import Any
 
-# Re-use the TTP severity table from mitre_mapper
-from src.mitre_mapper import TTP_SEVERITY
 from src.calibrated_scorer import CalibratedScorer
+from src.mitre_mapper import TTP_SEVERITY
 
 # Patterns that make an event "unusual" even with zero TTPs
 _UNUSUAL_PATTERNS = [
@@ -31,13 +29,6 @@ _UNUSUAL_PATTERNS = [
     "certutil", "bitsadmin",
     "schtasks", "at.exe",
 ]
-
-# ── TTP severity numeric mapping (used by weighted model) ──────────────
-_TTP_SEV_NUMERIC: dict[str, float] = {
-    "high": 1.0,
-    "medium": 0.6,
-    "low": 0.3,
-}
 
 # Default scoring config path (relative to this file)
 _DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "scoring_config.json")
@@ -68,6 +59,7 @@ def _compute_weighted_score(
     config: dict[str, Any],
 ) -> tuple[float, dict[str, float]]:
     """Compute a weighted composite severity score from multiple factors.
+    Delegates to CalibratedScorer for the raw computation.
 
     Args:
         alert: The parsed EDR alert dictionary.
@@ -79,78 +71,9 @@ def _compute_weighted_score(
         A tuple of ``(composite_score, factor_details)`` where
         ``factor_details`` maps factor names to their individual scores.
     """
-    weights = config["weights"]
-    ttp_count_max = config.get("ttp_count_max", 3)
-    event_type_scores = config.get("event_type_scores", {})
-    misp_threat_map = config.get("misp_threat_map", {})
-    temporal_windows = config.get("temporal_windows_hours", {})
-
-    # ── Factor 1: ttp_count ───────────────────────────────────────────
-    ttp_count = min(len(ttps), ttp_count_max)
-    ttp_count_score = ttp_count / ttp_count_max if ttp_count_max > 0 else 0.0
-
-    # ── Factor 2: ttp_max_severity ────────────────────────────────────
-    ttp_max_sev = 0.0
-    for ttp in ttps:
-        sev_label = TTP_SEVERITY.get(ttp["id"], "low")
-        sev_val = _TTP_SEV_NUMERIC.get(sev_label, 0.3)
-        if sev_val > ttp_max_sev:
-            ttp_max_sev = sev_val
-    ttp_max_sev_score = ttp_max_sev
-
-    # ── Factor 3: misp_threat_level ───────────────────────────────────
-    misp_threat = 0.0
-    if misp_enrichment:
-        threat_label = misp_enrichment.get("threat_level", "None")
-        misp_threat = misp_threat_map.get(threat_label, 0.0)
-    misp_threat_score = misp_threat
-
-    # ── Factor 4: event_type_baseline ─────────────────────────────────
-    event_type = (alert.get("event_type") or "").lower()
-    event_type_score = event_type_scores.get(event_type, event_type_scores.get("default", 0.3))
-
-    # ── Factor 5: temporal_proximity ──────────────────────────────────
-    temporal_score = 0.0
-    ts_str = alert.get("timestamp", "")
-    if ts_str:
-        try:
-            # Handle ISO 8601 with optional timezone suffix
-            ts_str_clean = ts_str.replace("Z", "+00:00")
-            alert_dt = datetime.fromisoformat(ts_str_clean)
-            now = datetime.now(timezone.utc)
-            if alert_dt.tzinfo is None:
-                alert_dt = alert_dt.replace(tzinfo=timezone.utc)
-            age_hours = (now - alert_dt).total_seconds() / 3600.0
-            recent_h = temporal_windows.get("recent", 1)
-            moderate_h = temporal_windows.get("moderate", 24)
-            if age_hours <= recent_h:
-                temporal_score = 1.0
-            elif age_hours <= moderate_h:
-                temporal_score = 0.5
-            else:
-                temporal_score = 0.1
-        except (ValueError, TypeError):
-            temporal_score = 0.0
-
-    # ── Weighted composite ────────────────────────────────────────────
-    composite = (
-        weights.get("ttp_count", 0.35) * ttp_count_score
-        + weights.get("ttp_max_severity", 0.25) * ttp_max_sev_score
-        + weights.get("misp_threat_level", 0.20) * misp_threat_score
-        + weights.get("event_type_baseline", 0.10) * event_type_score
-        + weights.get("temporal_proximity", 0.10) * temporal_score
-    )
-
-    factor_details = {
-        "ttp_count": ttp_count_score,
-        "ttp_max_severity": ttp_max_sev_score,
-        "misp_threat_level": misp_threat_score,
-        "event_type_baseline": event_type_score,
-        "temporal_proximity": temporal_score,
-        "composite": composite,
-    }
-
-    return composite, factor_details
+    scorer = CalibratedScorer()
+    raw = scorer.compute_raw_score(alert, ttps, misp_enrichment, config)
+    return raw, {"composite": raw}
 
 
 def _weighted_severity_label(composite: float, config: dict[str, Any]) -> str:

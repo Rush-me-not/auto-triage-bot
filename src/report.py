@@ -71,7 +71,7 @@ def build_report(
 
     report: dict[str, Any] = {
         "tool": "auto-triage-bot",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "run_timestamp": datetime.now(timezone.utc).isoformat(),
         "total_alerts": total,
         "clean_alerts": clean_count,

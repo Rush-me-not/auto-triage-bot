@@ -73,15 +73,15 @@ Mock threat-intelligence database in `src/misp_enricher.py` with 5 known-malicio
 ### Scoring model (threshold mode)
 
 | Metric | Value |
-|---|---|
-| Total alerts | 5 |
+|---|---|---|
+| Total alerts (synthetic) | 5 |
 | True positives (HIGH/CRITICAL) | 3 |
 | True negatives (CLEAN) | 2 |
-| False positives | 0 |
-| False negatives | 0 |
-| Accuracy | 100% (on test corpus) |
+| False positives | 0 (on the 5-alert synthetic test corpus) |
+| False negatives | 0 (on the 5-alert synthetic test corpus) |
+| Accuracy | 100% (on the 5-alert synthetic test corpus) |
 
-> **Note:** This evaluation is on a small synthetic corpus. Real-world performance will vary significantly.
+> **Note:** This evaluation is on a small synthetic corpus and is not representative of production performance. Real-world performance will vary significantly.
 
 ### Scoring model (weighted + calibrated mode)
 

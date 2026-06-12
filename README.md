@@ -69,14 +69,16 @@ Collects all findings and correlation chains into a structured JSON report. Aggr
 
 CLI entry point with argument parsing, pipeline orchestration, and user feedback. Supports `--verbose`, `--no-llm`, `--format`, and `--output` flags.
 
-## Results
+## Results (on synthetic 5-alert test corpus)
+
+> **Note:** All evaluation results below are from a small synthetic corpus and are not representative of production performance.
 
 ### Test Corpus
 
 **5 alerts processed** (3 injected, 2 clean):
 
-| Alert ID | Severity | TTPs | MISP Threat Level |
-|---|---|---|---|
+| Alert ID | Severity (threshold mode) | TTPs | MISP Threat Level |
+|---|---|---|---|---|
 | ALERT-2025-001-CLEAN | CLEAN | — | None |
 | ALERT-2025-002-CLEAN | CLEAN | — | None |
 | ALERT-2025-003-SUSP | HIGH | T1059.001, T1204.002 | High |
@@ -102,7 +104,7 @@ CLI entry point with argument parsing, pipeline orchestration, and user feedback
 ## Lessons Learned
 
 1. **Mock mode is underrated.** Building a mock MISP database forced me to think deeply about IoC types and matching logic — more than if I had simply slapped a PyMISP wrapper on a live instance. The mock-first approach made the architecture cleaner and the testing more thorough.
-2. **Rule-based mapping is fragile but explainable.** Regex rules for ATT&CK mapping catch exactly what you tell them to catch, which means zero false positives — but also means gaps in coverage. The tradeoff between precision and recall is real; an LLM layer helps bridge it.
+2. **Rule-based mapping is fragile but explainable.** Regex rules for ATT&CK mapping catch exactly what you tell them to catch, which means zero false positives on the 5-alert synthetic test corpus — but also means gaps in coverage on production data. The tradeoff between precision and recall is real; an LLM layer helps bridge it.
 3. **Cross-alert correlation is where the intelligence lives.** Individual alert triage produces findings. Cross-alert correlation produces attack chains. The chain view is far more valuable to an incident responder than a list of individual alerts.
 4. **Graceful degradation matters.** The LLM analysis is a bolt-on, not a dependency. This pattern — detect capability at runtime, use it if available, degrade if not — should be the default for security tools that want to be production-ready without forcing API dependencies.
 5. **Python stdlib is sufficient for a surprising amount of security engineering.** No pandas, no requests, no numpy. The entire pipeline runs on built-in modules. This matters for air-gapped environments, containerized deployments, and CI pipelines where adding dependencies requires approval.

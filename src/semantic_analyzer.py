@@ -20,11 +20,10 @@ from src.prompt_injection_detector import detect_prompt_injection
 DEEPSEEK_ENDPOINT = "https://api.deepseek.com/v1/chat/completions"
 DEEPSEEK_MODEL = "deepseek-chat"
 
-_KEY_FILE_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "rag-security-audit",
-    "src",
-    ".rag_audit_key",
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_KEY_FILE_PATH = os.path.join(_PROJECT_ROOT, ".auto_triage_key")
+_LEGACY_KEY_FILE_PATH = os.path.join(
+    _PROJECT_ROOT, "..", "rag-security-audit", "src", ".rag_audit_key",
 )
 
 _ANALYSIS_PROMPT = (
@@ -41,16 +40,27 @@ MAX_INPUT_LENGTH = 2000
 
 
 def _load_key() -> str | None:
-    """Read the DeepSeek V4 API key from environment or key file."""
+    """Read the DeepSeek V4 API key from environment or key files."""
     env_key = os.environ.get("RAG_AUDIT_LLM_KEY")
     if env_key:
         return env_key
+    # Try local project key file (new default)
     try:
         with open(_KEY_FILE_PATH) as f:
             key = f.read().strip()
-        return key if key else None
+        if key:
+            return key
     except (FileNotFoundError, PermissionError, OSError):
-        return None
+        pass
+    # Try legacy sibling-project path (backward compatibility)
+    try:
+        with open(_LEGACY_KEY_FILE_PATH) as f:
+            key = f.read().strip()
+        if key:
+            return key
+    except (FileNotFoundError, PermissionError, OSError):
+        pass
+    return None
 
 
 def can_use_deepseek() -> bool:

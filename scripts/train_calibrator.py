@@ -8,9 +8,10 @@ sys.path.insert(0, PROJECT_ROOT)
 
 from sklearn.isotonic import IsotonicRegression
 from src.alert_parser import parse_alert_directory
+from src.calibrated_scorer import CalibratedScorer
 from src.misp_enricher import enrich_alert
 from src.mitre_mapper import map_ttps
-from src.triage_engine import _compute_weighted_score, _load_scoring_config
+from src.triage_engine import _load_scoring_config
 
 LABELED_ALERTS = {
     "ALERT-2025-001-CLEAN": 0.0,
@@ -38,7 +39,8 @@ def main():
             continue
         ttps = map_ttps(alert)
         misp = enrich_alert(alert)
-        composite, _ = _compute_weighted_score(alert, ttps, misp, config)
+        scorer = CalibratedScorer()
+        composite = scorer.compute_raw_score(alert, ttps, misp, config)
         raw_scores.append(composite)
         labels.append(LABELED_ALERTS[aid])
 

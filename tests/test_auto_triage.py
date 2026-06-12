@@ -437,10 +437,11 @@ class TestSemanticAnalyzer:
     def test_degraded_no_key(self, monkeypatch):
         """When no key is available, return degraded result."""
         monkeypatch.delenv("RAG_AUDIT_LLM_KEY", raising=False)
-        # Temporarily point key file to non-existent path
         import src.semantic_analyzer as sa
-        original_path = sa._KEY_FILE_PATH
+        orig_key_path = sa._KEY_FILE_PATH
+        orig_legacy_path = sa._LEGACY_KEY_FILE_PATH
         sa._KEY_FILE_PATH = "/nonexistent/key/file.key"
+        sa._LEGACY_KEY_FILE_PATH = "/nonexistent/legacy/file.key"
         try:
             result = analyze_command_line("powershell.exe -EncodedCommand SQBFAFgA")
             assert result["obfuscation_score"] == 0
@@ -448,18 +449,22 @@ class TestSemanticAnalyzer:
             assert result["is_suspicious"] is False
             assert "unavailable" in result["llm_reasoning"].lower()
         finally:
-            sa._KEY_FILE_PATH = original_path
+            sa._KEY_FILE_PATH = orig_key_path
+            sa._LEGACY_KEY_FILE_PATH = orig_legacy_path
 
     def test_can_use_deepseek_no_key(self, monkeypatch):
         """can_use_deepseek returns False when no key is available."""
         monkeypatch.delenv("RAG_AUDIT_LLM_KEY", raising=False)
         import src.semantic_analyzer as sa
-        original_path = sa._KEY_FILE_PATH
+        orig_key_path = sa._KEY_FILE_PATH
+        orig_legacy_path = sa._LEGACY_KEY_FILE_PATH
         sa._KEY_FILE_PATH = "/nonexistent/key/file.key"
+        sa._LEGACY_KEY_FILE_PATH = "/nonexistent/legacy/file.key"
         try:
             assert can_use_deepseek() is False
         finally:
-            sa._KEY_FILE_PATH = original_path
+            sa._KEY_FILE_PATH = orig_key_path
+            sa._LEGACY_KEY_FILE_PATH = orig_legacy_path
 
     def test_degraded_on_network_error(self, monkeypatch):
         """When the API call fails (network error), return degraded result."""
