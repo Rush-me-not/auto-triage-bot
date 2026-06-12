@@ -17,6 +17,8 @@ Enhancements:
 from datetime import datetime, timezone
 from typing import Any
 
+from src.mitre_mapper import TTP_SEVERITY
+
 # ── Attack chain definitions ───────────────────────────────────────────────
 # Each chain specifies:
 #   chain_type:      A label for the chain.
@@ -182,10 +184,14 @@ def _detect_rapid_lateral_movement(
                             ttp_name = ttp["name"]
                             break
 
+                    rlm_alert_ids = [fa["alert_id"], fb["alert_id"]]
+                    rlm_confidence = compute_chain_confidence(
+                        rlm_alert_ids, findings
+                    )
                     chains.append({
                         "chain_id": chain_id,
                         "chain_type": "rapid_lateral_movement",
-                        "alert_ids": [fa["alert_id"], fb["alert_id"]],
+                        "alert_ids": rlm_alert_ids,
                         "hosts": [host_a, host_b],
                         "shared_ttp": ttp_id,
                         "shared_ttp_name": ttp_name,
@@ -196,6 +202,7 @@ def _detect_rapid_lateral_movement(
                             f"within {delta:.1f} minutes."
                         ),
                         "time_delta_minutes": round(delta, 1),
+                        "confidence": rlm_confidence,
                         "recommendations": [
                             "Immediately isolate ALL affected hosts from the network.",
                             "Identify the initial compromise vector and patient zero.",
@@ -206,6 +213,68 @@ def _detect_rapid_lateral_movement(
                     })
 
     return chains
+
+
+_TTP_SEV_NUMERIC: dict[str, float] = {
+    "high": 1.0,
+    "medium": 0.6,
+    "low": 0.3,
+}
+
+
+def compute_chain_confidence(
+    chain_alert_ids: list[str],
+    findings: list[dict[str, Any]],
+    max_window_hours: float = 24.0,
+) -> float:
+    if len(chain_alert_ids) < 2:
+        return 0.0
+
+    alert_map = {f.get("alert_id", ""): f for f in findings if f.get("alert_id")}
+    chain_findings = [alert_map[aid] for aid in chain_alert_ids if aid in alert_map]
+    if len(chain_findings) < 2:
+        return 0.0
+
+    # Factor 1: mean TTP severity score
+    sev_scores = []
+    for f in chain_findings:
+        for ttp in f.get("ttps", []):
+            sev_label = TTP_SEVERITY.get(ttp["id"], "low")
+            sev_scores.append(_TTP_SEV_NUMERIC.get(sev_label, 0.3))
+    mean_severity = sum(sev_scores) / len(sev_scores) if sev_scores else 0.0
+
+    # Factor 2: temporal proximity factor
+    timestamps = []
+    for f in chain_findings:
+        ts = _parse_timestamp(f.get("timestamp", ""))
+        if ts is not None:
+            timestamps.append(ts)
+    if len(timestamps) >= 2:
+        min_ts = min(timestamps)
+        max_ts = max(timestamps)
+        delta_hours = (max_ts - min_ts).total_seconds() / 3600.0
+        temporal_factor = max(0.0, 1.0 - (delta_hours / max_window_hours))
+    else:
+        temporal_factor = 0.5
+
+    # Factor 3: IoC overlap ratio (Jaccard similarity of IoC sets)
+    ioc_sets = []
+    for f in chain_findings:
+        indicators = f.get("indicators", {})
+        iocs = set()
+        for ioc_type in ("hashes", "ips", "domains"):
+            for ioc in indicators.get(ioc_type, []):
+                iocs.add(ioc.lower())
+        ioc_sets.append(iocs)
+    if len(ioc_sets) >= 2:
+        intersection = set.intersection(*ioc_sets)
+        union = set.union(*ioc_sets)
+        ioc_overlap = len(intersection) / len(union) if union else 0.0
+    else:
+        ioc_overlap = 0.0
+
+    confidence = mean_severity * temporal_factor * max(ioc_overlap, 0.05)
+    return min(round(confidence, 4), 1.0)
 
 
 def correlate(
@@ -334,6 +403,10 @@ def correlate(
         }
         if time_delta is not None:
             chain_entry["time_delta_minutes"] = time_delta
+
+        # Compute chain confidence
+        confidence = compute_chain_confidence(alert_ids, findings)
+        chain_entry["confidence"] = confidence
 
         chains.append(chain_entry)
 
